@@ -7,11 +7,13 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
 
 class CategoriesTableViewController: UITableViewController {
     
-    var Categories = [Category]()
+    
+    let realm = try! Realm()
+    var Categories: Results<Category>?
     
     let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
 
@@ -23,20 +25,19 @@ class CategoriesTableViewController: UITableViewController {
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
         var textfield = UITextField()
         
-        let alert = UIAlertController(title: "Add new Categoru", message: "", preferredStyle: .alert)
-        
+        let alert = UIAlertController(title: "Add new Category", message: "", preferredStyle: .alert)
+
         let action = UIAlertAction(title: "add", style: .default) { (action) in
-            let newCate = Category(context: self.context)
+            let newCate = Category()
             newCate.name = textfield.text!
-            
-            self.Categories.append(newCate)
-            
-            self.saveCategory()
+
+
+            self.saveCategory(category: newCate)
         }
         
         alert.addAction(action)
-        
-        
+
+
         alert.addTextField { (Field) in
             textfield = Field
             textfield.placeholder = "ADD NEW CATEGORY"
@@ -48,13 +49,13 @@ class CategoriesTableViewController: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return Categories.count
+        return Categories?.count ?? 1
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "CategoriesCell", for: indexPath)
         
-        cell.textLabel?.text = Categories[indexPath.row].name
+        cell.textLabel?.text = Categories?[indexPath.row].name ?? "NO DATA ADDED YET"
         
         return cell
         
@@ -68,14 +69,16 @@ class CategoriesTableViewController: UITableViewController {
         let destination = segue.destination as! ViewController
         
         if let indexPath = tableView.indexPathForSelectedRow {
-            destination.selectedCategory = Categories[indexPath.row]
+            destination.selectedCategory = Categories?[indexPath.row]
         }
         
     }
     
-    func saveCategory(){
+    func saveCategory(category : Category){
         do {
-            try context.save()
+            try realm.write {
+                realm.add(category)
+            }
         } catch {
             print("error saving category \(error)")
         }
@@ -84,14 +87,7 @@ class CategoriesTableViewController: UITableViewController {
     }
     
     func loadcate(){
-        let request : NSFetchRequest<Category> = Category.fetchRequest()
-        do{
-         try Categories = context.fetch(request)
-        }catch{
-            print("error fetching data \(error)")
-        }
-        
-        tableView.reloadData()
+        Categories = realm.objects(Category.self)
     }
     
     
